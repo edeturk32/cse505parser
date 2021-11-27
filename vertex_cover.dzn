@@ -1,0 +1,7 @@
+N = 6;
+e = [| false, true,  false, false, false, true
+     | true,  false, true,  false, true,  false
+     | false, true,  false, true,  false, true
+     | false, false, true,  false, true,  false
+     | false, true,  false, true,  false, true
+     | true,  false, true,  false, true,  false |];

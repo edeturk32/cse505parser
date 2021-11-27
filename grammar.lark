@@ -1,0 +1,119 @@
+// A FlatZinc model
+start : [predicate_item]* [par_decl_item]* [var_decl_item]* [constraint_item]* solve_item
+
+// Predicate items
+predicate_item : "predicate" identifier "(" [pred_param_type ":" identifier ("," identifier)* ] ")" ";"
+
+// Identifiers
+identifier : /[A-Za-z][A-Za-z0-9_]*/
+
+basic_par_type : "bool"
+                   | "int"
+                   | "float"
+                   | "set of int"
+
+par_type : basic_par_type
+             | "array" "[" index_set "]" "of" basic_par_type
+
+basic_var_type : "var" "bool"
+                   | "var" "int"
+                   | "var" int_literal ".." int_literal
+                   | "var" "{" int_literal ("," int_literal)* "}"
+                   | "var" "float"
+                   | "var" float_literal ".." float_literal
+                   | "var" "set" "of" int_literal ".." int_literal
+                   | "var" "set" "of" "{" [ int_literal ("," int_literal)* ] "}"
+
+array_var_type : "array" "[" index_set "]" "of" basic_var_type
+
+index_set : "1" ".." int_literal
+
+basic_pred_param_type : basic_par_type
+                          | basic_var_type
+                          | int_literal ".." int_literal
+                          | float_literal ".." float_literal
+                          | "{" int_literal ("," int_literal)* "}"
+                          | "set" "of" int_literal ".." int_literal
+                          | "set" "of" "{" [  int_literal ("," int_literal)* ] "}"
+                          | "var" "set" "of" "int"
+
+pred_param_type : basic_pred_param_type
+                    | "array" "[" pred_index_set "]" "of" basic_pred_param_type
+
+pred_index_set : index_set
+                   | "int"
+
+basic_literal_expr : bool_literal
+                       | int_literal
+                       | float_literal
+                       | set_literal
+
+basic_expr : basic_literal_expr
+              | var_par_identifier
+
+expr       : basic_expr
+               | array_literal
+
+par_expr   : basic_literal_expr
+               | par_array_literal
+
+var_par_identifier : /[A-Za-z_][A-Za-z0-9_]*/
+
+// Boolean literals
+bool_literal : "false" -> false
+                 | "true" -> true
+
+// Integer literals
+int_literal : /-?[0-9]+/
+                | /-?0x[0-9A-Fa-f]+/
+                | /-?0o[0-7]+/
+
+// Float literals
+float_literal : /[0-9]+\.[0-9]+/
+                  | /[0-9]+\.[0-9]+[Ee][-+]?[0-9]+/
+                  | /[0-9]+[Ee][-+]?[0-9]+/
+
+// Set literals
+set_literal : "{" [ int_literal ("," int_literal)* ] "}"
+                | int_literal ".." int_literal
+                | "{" [ float_literal ("," float_literal)* ] "}"
+                | float_literal ".." float_literal
+
+array_literal : "[" [ basic_expr ("," basic_expr)* ] "]"
+
+par_array_literal : "[" [ basic_literal_expr ("," basic_literal_expr)* ] "]"
+
+// Parameter declarations
+
+par_decl_item : par_type ":" var_par_identifier "=" par_expr ";"
+
+// Variable declarations
+
+var_decl_item : basic_var_type ":" var_par_identifier annotations [ "=" basic_expr ] ";"
+                  | array_var_type ":" var_par_identifier annotations "=" array_literal ";"
+                  
+
+// Constraint items
+
+constraint_item : "constraint" identifier "(" [ expr ("," expr)* ] ")" annotations ";"
+
+// Solve item
+
+solve_item : "solve" annotations "satisfy" ";"
+               | "solve" annotations "minimize" basic_expr ";"
+               | "solve" annotations "maximize" basic_expr ";"
+
+// Annotations
+
+annotations : [ "::" annotation ]*
+
+annotation : identifier
+               | identifier "(" ann_expr ("," ann_expr)* ")"
+
+ann_expr : expr
+              | annotation
+
+
+%import common.WS
+%ignore WS
+// End of FlatZinc grammar
