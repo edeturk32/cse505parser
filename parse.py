@@ -35,7 +35,7 @@ def process_var_decl_item(item):
     # TODO: process variable type and stuff after equals sign
     [_, var_par_identifier, annotations] = item.children[:3]
     #print(var_par_identifier.children[0], process_annotations(annotations))
-    print(var_par_identifier.children[0], annotations)
+    print(var_par_identifier.children[0].value, annotations)
 
 def process_literal(literal):
     if literal.data == 'bool_literal':
@@ -59,7 +59,7 @@ def process_constraint_item(item):
 for item in tree.children:
     if item == None:
         continue
-    #if item.data == 'var_decl_item':
-    #    process_var_decl_item(item)
-    if item.data == 'constraint_item':
-        process_constraint_item(item)
+    if item.data == 'var_decl_item':
+        process_var_decl_item(item)
+    #if item.data == 'constraint_item':
+    #    process_constraint_item(item)
