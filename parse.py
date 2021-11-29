@@ -142,7 +142,7 @@ class ArrayNode(VarDeclNode):
 def get_expression(tre: Tree):
     expr = [c.children[0] for c in tre.children if c.data.value == "expr"]
     ex = []
-    for e in expr.children:
+    for e in expr:
         if isinstance(e, Tree):
             if e.data.value == "var_par_identifier":
                 ex.append(e.children[0].value)
@@ -154,6 +154,8 @@ def get_expression(tre: Tree):
 class ConstraintNode(VarDeclNode):
     def __init__(self, tree):
         self.predicate = self._get_predicate(tree)
+        if self.predicate == "int_lin_le":
+            self.predicate_var = self._get_predicate_var(tree)
         self.arguments = self._get_arguments(tree)
         self.annotations = self._get_annotations(tree)
         self.value = self._get_value(tree)
@@ -192,15 +194,43 @@ class ConstraintNode(VarDeclNode):
             ]
 
         elif self.predicate == "int_lin_le":
+            return [
+                x.children[0].value
+                for x in [
+                    child for child in tree.children if child.data.value == "expr"
+                ][1]
+                .children[0]
+                .children
+            ]
+
+        if self.predicate == "int_times":
             return get_expression(tree)
-        else:
-            print(self.predicate)
+
+    def _get_predicate_var(self, tr: Tree):
+        return tr.children[1].children[0].children[0].value
 
     def _parse_arguments(self, tree_args):
         if all([isinstance(item, Tree) for item in tree_args]):
             return [node.children[0].value for node in tree_args]
         else:
             return tree_args
+
+
+class TargetNode:
+    def __init__(self, t: Tree):
+        self.var_type = self._get_var_type(t)
+        self.var_name = self._get_var_name(t)
+        self.annotations = self._get_annotations(t)
+
+    def _get_var_type(self, tree: Tree):
+        return tree.data.value
+
+    def _get_var_name(self, tree: Tree):
+        var = [child for child in tree.children if child.data == "var_par_identifier"]
+        return [c.value for c in var[0].children]
+
+    def _get_annotations(self, tree: Tree):
+        return [child for child in tree.children if child.data == "annotations"]
 
 
 if __name__ in "__main__":
@@ -222,7 +252,6 @@ if __name__ in "__main__":
 
                 else:
                     n = VarDeclNode(item)
-
                     if n.is_introduced:
                         introduced_nodes.append(n)
                     else:
@@ -230,28 +259,41 @@ if __name__ in "__main__":
 
             elif item.data.value == "constraint_item":
                 cn = ConstraintNode(item)
-                if cn.predicate == "bool2int":
-                    print()
                 constraints.append(cn)
 
             else:
-                pass
+                if item.data.value == "solve_item":
+                    tn = TargetNode(item)
 
-    # print(len(obj_func), len(introduced_nodes), len(constraints), len(array_nodes))
-    print(f"\n\n{'-'*100}\n\n")
+    print("\n\nObjective Input Nodes")
+    print(f"{'-'*100}")
     for of in obj_func:
         print(of.var_name, of.var_values)
+    print(f"{'-'*100}\n\n")
 
-    print(f"\n\n{'-'*100}\n\n")
+    print("Introduced Nodes")
+    print(f"{'-'*100}")
     for intro_nodes in introduced_nodes:
         print(intro_nodes.var_name, intro_nodes.var_values)
 
-    print(f"\n\n{'-'*100}\n\n")
+    print(f"{'-'*100}\n\n")
+    print("Constraints Nodes")
+    print(f"{'-'*100}")
     for c in constraints:
-        print(c.predicate, c.arguments)
+        if c.predicate == "int_lin_le":
+            print(c.predicate, c.predicate_var, c.arguments)
+        else:
+            print(c.predicate, c.arguments)
+    print(f"{'-'*100}\n\n")
 
-    print(f"\n\n{'-'*100}\n\n")
+    print("Array Nodes")
+    print(f"{'-'*100}")
     for a in array_nodes:
         print(a.var_type, a.var_values)
+    print(f"{'-'*100}\n\n")
 
-    print(f"\n\n{'-'*100}\n\n")
+    print("Target Nodes")
+    print(f"{'-'*100}")
+
+    print(f"Target:\t{tn.var_name}")
+    print(f"{'-'*100}\n")
