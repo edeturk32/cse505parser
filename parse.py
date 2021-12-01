@@ -1,6 +1,5 @@
 from lark import Lark, Transformer, Token, Tree
 
-
 class ProcessFlatZinc(Transformer):
     def basic_expr(self, subexprs):
         return subexprs[0]
@@ -16,55 +15,6 @@ class ProcessFlatZinc(Transformer):
 
     def true(self, children):
         return True
-
-
-def get_identifier(token):
-    return token.children[0].value
-
-
-def process_array(array):
-    return [get_identifier(child) for child in array.children]
-
-
-def process_annotations(annotations):
-    if annotations.children[0] == None:
-        return []
-    # TODO: handle output array case
-    return [
-        annotation.children[0].children[0].value for annotation in annotations.children
-    ]
-
-
-def process_var_decl_item(item):
-    # TODO: process variable type and stuff after equals sign
-    [_, var_par_identifier, annotations] = item.children[:3]
-    # print(var_par_identifier.children[0], process_annotations(annotations))
-    print(var_par_identifier.children[0], annotations)
-
-
-def process_literal(literal):
-    if literal.data == "bool_literal":
-        return literal
-    if literal.data == "array_literal":
-        return process_array(literal)
-    return literal
-
-
-def process_constraint_item(item):
-    constraints = {}
-    for child in item.children:
-        if child == None:
-            continue
-        # if child.data == 'identifier':
-        #    print('identifier', get_identifier(child))
-        elif child.data == "expr":
-            # print('expr', process_literal(child.children[0]))
-            print("expr", child.children[0])
-        # if child.data == 'annotations':
-        #    print('annotations', process_annotations(child))
-        else:
-            print(child.data)
-
 
 class Node:
     def __init__(self, tree):
@@ -82,9 +32,11 @@ class Node:
         return y
 
     def _get_annotations(self, t: Tree):
-        x = [child for child in t.children if child.data.type == "annotations"]
-        return x
-
+        for child in t.children:
+            if child.data == "annotations":
+                if len(child.children) > 0 and child.children[0] == None:
+                    return []
+                return [annotation.children for annotation in child.children]
 
 class VarDeclNode:
     def __init__(self, tree: Tree):
@@ -151,13 +103,14 @@ def get_expression(tre: Tree):
     return ex
 
 
-class ConstraintNode(VarDeclNode):
+class ConstraintNode(Node):
     def __init__(self, tree):
         self.predicate = self._get_predicate(tree)
         if self.predicate == "int_lin_le":
             self.predicate_var = self._get_predicate_var(tree)
         self.arguments = self._get_arguments(tree)
         self.annotations = self._get_annotations(tree)
+        self.defines = self._defines()
         self.value = self._get_value(tree)
 
     def _get_value(self, tree):
@@ -215,6 +168,11 @@ class ConstraintNode(VarDeclNode):
         else:
             return tree_args
 
+    def _defines(self):
+        if len(self.annotations) > 0 and \
+                self.annotations[0][0].children[0].value == "defines_var":
+            return self.annotations[0][1].children[0].children[0].children[0].value
+        return None
 
 class TargetNode:
     def __init__(self, t: Tree):
@@ -232,13 +190,26 @@ class TargetNode:
     def _get_annotations(self, tree: Tree):
         return [child for child in tree.children if child.data == "annotations"]
 
+decision_vars = {}
+undefined_subexprs = set()
+subexprs = {}
+
+def process_decl(node):
+    if node.is_introduced:
+        undefined_subexprs.add(node.var_name)
+    else:
+        decision_vars[node.var_name] = node.var_values
+
+def process_constraint(node):
+    if node.defines == None:
+        pass
+    else:
+        print(node.predicate)
 
 if __name__ in "__main__":
     # flatzinc = open("vertex_cover.fzn", "r")
     flatzinc = open("qk.fzn", "r")
     tree = ProcessFlatZinc().transform(Lark.open("grammar.lark").parse(flatzinc.read()))
-    obj_func = []
-    introduced_nodes = []
     constraints = []
     array_nodes = []
     for item in tree.children:
@@ -249,32 +220,26 @@ if __name__ in "__main__":
                 if item.children[0].data == "array_var_type":
                     an = ArrayNode(item)
                     array_nodes.append(an)
-
                 else:
-                    n = VarDeclNode(item)
-                    if n.is_introduced:
-                        introduced_nodes.append(n)
-                    else:
-                        obj_func.append(n)
+                    process_decl(VarDeclNode(item))
 
             elif item.data.value == "constraint_item":
-                cn = ConstraintNode(item)
-                constraints.append(cn)
+                process_constraint(ConstraintNode(item))
 
             else:
                 if item.data.value == "solve_item":
                     tn = TargetNode(item)
 
-    print("\n\nObjective Input Nodes")
+    print("\n\nDecision Variables")
     print(f"{'-'*100}")
-    for of in obj_func:
-        print(of.var_name, of.var_values)
+    for dv, vals in decision_vars.items():
+        print(dv, vals)
     print(f"{'-'*100}\n\n")
 
-    print("Introduced Nodes")
+    print("Introduced Variables")
     print(f"{'-'*100}")
-    for intro_nodes in introduced_nodes:
-        print(intro_nodes.var_name, intro_nodes.var_values)
+    for iv in undefined_subexprs:
+        print(iv)
 
     print(f"{'-'*100}\n\n")
     print("Constraints Nodes")
