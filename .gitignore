@@ -1,2 +1,5 @@
 *.fzn
 *.ozn
+.vscode
+__pycache__/
+.mypy_cache/

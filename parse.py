@@ -1,6 +1,7 @@
 from lark import Lark, Transformer, Token, Tree
 
 from constraints import get_constraint
+from vars import VarDeclNode, ArrayNode
 
 
 class ProcessFlatZinc(Transformer):
@@ -89,59 +90,6 @@ class Node:
         return x
 
 
-class VarDeclNode:
-    def __init__(self, tree: Tree):
-        self.data_type, self.data_value = self._get_data(tree)
-        self.name_type, self.var_name = self._get_name(tree)
-        self.var_type, self.var_values = self._get_var_info(tree)
-        self.annotations = self._get_annotations(tree)
-        self.is_introduced = self._is_introduced()
-        self.children = tree.children
-
-    def _get_data(self, tree: Tree):
-        return tree.data.type, tree.data.value
-
-    def _get_var_info(self, tree: Tree):
-        return tree.children[0].data.value, tree.children[0].children
-
-    def _get_name(self, tree: Tree):
-        return tree.children[1].data.value, tree.children[1].children[0].value
-
-    def _get_annotations(self, tree: Tree):
-        if tree.children[2].children == [None]:
-            return None
-        else:
-            return tree.children[2].children
-
-    def _is_introduced(self):
-        if isinstance(self.annotations, list):
-            if len(self.annotations[0].children) == 1:
-                if (
-                    self.annotations[0].children[0].children[0].value
-                    == "var_is_introduced"
-                ):
-                    return True
-        return False
-
-
-class ArrayNode(VarDeclNode):
-    def __init__(self, t: Tree):
-        self.data_type, self.data_value = self._get_data(t)
-        self.name_type, self.var_name = self._get_name(t)
-        self.var_type, _ = self._get_var_info(t)
-        self.var_values = self._get_arguments(t)
-        self.annotations = self._get_annotations(t)
-
-    def _get_arguments(self, t: Tree):
-        _args = []
-        for x in t.children:
-            if x.data.value == "array_literal":
-                for y in x.children:
-                    if y.data.value == "var_par_identifier":
-                        _args.append(y.children[0].value)
-        return _args
-
-
 def get_expression(tre: Tree):
     expr = [c.children[0] for c in tre.children if c.data.value == "expr"]
     ex = []
@@ -152,84 +100,6 @@ def get_expression(tre: Tree):
             else:
                 ex.append(e.children[0])
     return ex
-
-
-"""
-class ConstraintNode(VarDeclNode):
-    def __init__(self, tree):
-        self.predicate = self._get_predicate(tree)
-        if self.predicate == "int_lin_le":
-            self.predicate_var = self._get_predicate_var(tree)
-        self.arguments = self._get_arguments(tree)
-        self.annotations = self._get_annotations(tree)
-        self.value = self._get_value(tree)
-
-    def _get_value(self, tree):
-        if self.predicate == "int_lin_eq":
-            for child in tree.children:
-                if child.data == "expr":
-                    return child.children[0].children
-        return tree.children[2].children
-
-    def _get_predicate(self, tree):
-        for child in tree.children:
-            if child.data.value == "identifier":
-                return child.children[0].value
-        return None
-
-    def _get_arguments(self, tree):
-        if self.predicate == "array_bool_or":
-            for child in tree.children:
-                if (
-                    child.data.value == "expr"
-                    and child.children[0].data.value == "array_literal"
-                ):
-                    return self._parse_arguments(child.children[0].children)
-
-        elif self.predicate == "int_lin_eq":
-            for child in tree.children:
-                if (
-                    child.data == "expr"
-                    and hasattr(child.children[0], "children")
-                    and isinstance(child.children[0].children, list)
-                    and all([isinstance(x, Tree) for x in child.children[0].children])
-                ):
-                    return [x.children[0].value for x in child.children[0].children]
-
-        elif self.predicate == "bool2int":
-            return [
-                x[0].value
-                for x in [
-                    tree.children[i].children[0].children
-                    for i in range(1, len(tree.children))
-                    if tree.children[i].data == "expr"
-                ]
-            ]
-
-        elif self.predicate == "int_lin_le":
-            print()
-            return [
-                x.children[0].value
-                for x in [
-                    child for child in tree.children if child.data.value == "expr"
-                ][1]
-                .children[0]
-                .children
-            ]
-
-        if self.predicate == "int_times":
-            return get_expression(tree)
-
-    def _get_predicate_var(self, tr: Tree):
-        return tr.children[1].children[0].children[0].value
-
-    def _parse_arguments(self, tree_args):
-        if all([isinstance(item, Tree) for item in tree_args]):
-            return [node.children[0].value for node in tree_args]
-        else:
-            return tree_args
-
-"""
 
 
 class TargetNode:
@@ -247,6 +117,33 @@ class TargetNode:
 
     def _get_annotations(self, tree: Tree):
         return [child for child in tree.children if child.data == "annotations"]
+
+
+class ParDeclItem:
+    name = "par_decl_item"
+
+    def __init__(self, tree: Tree):
+        self.node_type = tree.data.value
+        self.variable = (
+            [x for x in item.children if x.data.value == "var_par_identifier"][0]
+            .children[0]
+            .value
+        )
+        self.predicate_type = (
+            [x for x in item.children if x.data.value == "par_expr"][0]
+            .children[0]
+            .data.value
+        )
+        self.values = (
+            [x for x in item.children if x.data.value == "par_expr"][0]
+            .children[0]
+            .children
+        )
+        self.expressions = [
+            (x.data.value, [y for y in x.children]) for x in item.children
+        ]
+        self.definitions = [x[0] for x in self.expressions]
+        # self.values = [x[1] for x in self.expressions]
 
 
 if __name__ in "__main__":
@@ -278,6 +175,10 @@ if __name__ in "__main__":
                 print(cn.predicate)
                 constraints.append(cn)
 
+            elif item.data.value == "par_decl_item":
+                pdi = ParDeclItem(item)
+                array_nodes.append(pdi)
+
             else:
                 if item.data.value == "solve_item":
                     tn = TargetNode(item)
@@ -304,7 +205,10 @@ if __name__ in "__main__":
     print("Array Nodes")
     print(f"{'-'*100}")
     for a in array_nodes:
-        print(a.var_type, a.var_values)
+        if hasattr(a, "name"):
+            print(a.node_type, a.variable, a.values)
+        else:
+            print(a.var_type, a.var_values)
     print(f"{'-'*100}\n\n")
 
     print("Target Nodes")
