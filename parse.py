@@ -1,5 +1,7 @@
 from lark import Lark, Transformer, Token, Tree
 
+from constraints import get_constraint
+
 
 class ProcessFlatZinc(Transformer):
     def basic_expr(self, subexprs):
@@ -19,7 +21,8 @@ class ProcessFlatZinc(Transformer):
 
 
 def get_identifier(token):
-    return token.children[0].value
+    if tree.children[0].data.value == "identifier":
+        return tree.children[0].children[0].value
 
 
 def process_array(array):
@@ -151,6 +154,7 @@ def get_expression(tre: Tree):
     return ex
 
 
+"""
 class ConstraintNode(VarDeclNode):
     def __init__(self, tree):
         self.predicate = self._get_predicate(tree)
@@ -161,6 +165,10 @@ class ConstraintNode(VarDeclNode):
         self.value = self._get_value(tree)
 
     def _get_value(self, tree):
+        if self.predicate == "int_lin_eq":
+            for child in tree.children:
+                if child.data == "expr":
+                    return child.children[0].children
         return tree.children[2].children
 
     def _get_predicate(self, tree):
@@ -180,8 +188,13 @@ class ConstraintNode(VarDeclNode):
 
         elif self.predicate == "int_lin_eq":
             for child in tree.children:
-                if child.data == "expr":
-                    return child.children[0].children
+                if (
+                    child.data == "expr"
+                    and hasattr(child.children[0], "children")
+                    and isinstance(child.children[0].children, list)
+                    and all([isinstance(x, Tree) for x in child.children[0].children])
+                ):
+                    return [x.children[0].value for x in child.children[0].children]
 
         elif self.predicate == "bool2int":
             return [
@@ -194,6 +207,7 @@ class ConstraintNode(VarDeclNode):
             ]
 
         elif self.predicate == "int_lin_le":
+            print()
             return [
                 x.children[0].value
                 for x in [
@@ -214,6 +228,8 @@ class ConstraintNode(VarDeclNode):
             return [node.children[0].value for node in tree_args]
         else:
             return tree_args
+
+"""
 
 
 class TargetNode:
@@ -258,7 +274,8 @@ if __name__ in "__main__":
                         obj_func.append(n)
 
             elif item.data.value == "constraint_item":
-                cn = ConstraintNode(item)
+                cn = get_constraint(item)
+                print(cn.predicate)
                 constraints.append(cn)
 
             else:
@@ -280,10 +297,8 @@ if __name__ in "__main__":
     print("Constraints Nodes")
     print(f"{'-'*100}")
     for c in constraints:
-        if c.predicate == "int_lin_le":
-            print(c.predicate, c.predicate_var, c.arguments)
-        else:
-            print(c.predicate, c.arguments)
+        print(c.predicate, c.arguments)
+
     print(f"{'-'*100}\n\n")
 
     print("Array Nodes")
