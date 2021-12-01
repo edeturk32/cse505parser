@@ -1,4 +1,5 @@
 from lark import Lark, Transformer, Token, Tree
+from poly import Poly, Term
 
 class ProcessFlatZinc(Transformer):
     def basic_expr(self, subexprs):
@@ -204,11 +205,26 @@ def process_constraint(node):
     if node.defines == None:
         pass
     else:
-        print(node.predicate)
+        if node.predicate == "bool2int":
+            [bool_var, int_var] = node.arguments
+            assert int_var == node.defines
+            # Now we'll treat the int variable as the decision variable
+            undefined_subexprs.remove(int_var)
+            decision_vars.pop(bool_var)
+            decision_vars[int_var] = [0, 1]
+        elif node.predicate == "int_times":
+            [factor1, factor2, product] = node.arguments
+            factor1 = Term(variables=[factor1])
+            factor2 = Term(variables=[factor2])
+            assert product == node.defines
+            undefined_subexprs.remove(product)
+            subexprs[product] = Poly([Term.mul(factor1, factor2)])
+        elif node.predicate == "int_lin_eq":
+            print(node.arguments)
 
 if __name__ in "__main__":
     # flatzinc = open("vertex_cover.fzn", "r")
-    flatzinc = open("qk.fzn", "r")
+    flatzinc = open("vertex_cover.fzn", "r")
     tree = ProcessFlatZinc().transform(Lark.open("grammar.lark").parse(flatzinc.read()))
     constraints = []
     array_nodes = []
@@ -234,12 +250,18 @@ if __name__ in "__main__":
     print(f"{'-'*100}")
     for dv, vals in decision_vars.items():
         print(dv, vals)
-    print(f"{'-'*100}\n\n")
 
-    print("Introduced Variables")
+    print(f"{'-'*100}\n\n")
+    print("Undefined Variables")
     print(f"{'-'*100}")
     for iv in undefined_subexprs:
         print(iv)
+
+    print(f"{'-'*100}\n\n")
+    print("Subexpressions")
+    print(f"{'-'*100}")
+    for var, poly in subexprs.items():
+        print(var, poly)
 
     print(f"{'-'*100}\n\n")
     print("Constraints Nodes")

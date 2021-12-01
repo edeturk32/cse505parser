@@ -1,2 +1,4 @@
 *.fzn
 *.ozn
+
+__pycache__/
