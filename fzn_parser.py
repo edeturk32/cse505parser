@@ -1,8 +1,6 @@
 from lark import Lark, Transformer, Token, Tree
 
-from constraints import get_constraint
 from node import Node
-from vars import VarDeclNode, ArrayNode
 
 
 class ProcessFlatZinc(Transformer):
@@ -26,10 +24,7 @@ if __name__ in "__main__":
     # flatzinc = open("vertex_cover.fzn", "r")
     flatzinc = open("qk.fzn", "r")
     tree = ProcessFlatZinc().transform(Lark.open("grammar.lark").parse(flatzinc.read()))
-    obj_func = []
-    introduced_nodes = []
-    constraints = []
-    array_nodes = []
+
     for item in tree.children:
         if item == None:
             continue
