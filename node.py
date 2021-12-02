@@ -15,6 +15,10 @@ class Node:
         for k in tree.children:
             if k:
                 things = self.get_things(k.children)
+                if isinstance(things, list) and all(
+                    [isinstance(i, int) for i in things]
+                ):
+                    things = [things]
 
                 if isinstance(parsed_tree.get(k.data.value), list):
                     parsed_tree[k.data.value].append(things)
@@ -56,6 +60,9 @@ class Node:
 
             elif isinstance(item[0], Tree):
                 return [self.get_values(i) for i in item]
+
+            else:
+                return item
 
         else:
             return item
