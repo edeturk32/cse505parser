@@ -1,3 +1,5 @@
+import os
+
 from lark import Lark, Transformer, Token, Tree
 
 from node import Node
@@ -21,13 +23,25 @@ class ProcessFlatZinc(Transformer):
 
 
 if __name__ in "__main__":
-    # flatzinc = open("vertex_cover.fzn", "r")
-    flatzinc = open("qk.fzn", "r")
-    tree = ProcessFlatZinc().transform(Lark.open("grammar.lark").parse(flatzinc.read()))
+    directories = (
+        "/Users/dan/Dropbox/SBU/fall_2021/computing_with_logic/project/cse505parser",
+        "/Users/dan/Dropbox/SBU/fall_2021/computing_with_logic/project/cse505parser/quantum_tutorial",
+    )
+    for directory in directories:
+        for filename in os.listdir(directory):
+            if filename.endswith(".fzn"):
+                if filename == "set_partition.fzn":
+                    f = f"{directory}/{filename}"
+                    flatzinc = open(f, "r")
+                    # print()
+                    tree = ProcessFlatZinc().transform(
+                        Lark.open("grammar.lark").parse(flatzinc.read())
+                    )
+                    print(f"\n\n{'-'*110}\n{filename}\n{'-'*110}\n")
+                    for item in tree.children:
+                        if item == None:
+                            continue
 
-    for item in tree.children:
-        if item == None:
-            continue
-        else:
-            mynode = Node(item)
-            print(mynode)
+                        else:
+                            mynode = Node(item)
+                            print(mynode)

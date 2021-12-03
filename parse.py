@@ -19,6 +19,7 @@ class ProcessFlatZinc(Transformer):
     def true(self, children):
         return True
 
+
 class Node:
     def __init__(self, tree):
         self.identifier = self._get_identifier(tree)
@@ -40,6 +41,7 @@ class Node:
                 if len(child.children) > 0 and child.children[0] == None:
                     return []
                 return [annotation.children for annotation in child.children]
+
 
 def get_expression(tre: Tree):
     expr = [c.children[0] for c in tre.children if c.data.value == "expr"]
@@ -69,15 +71,18 @@ class TargetNode:
     def _get_annotations(self, tree: Tree):
         return [child for child in tree.children if child.data == "annotations"]
 
+
 decision_vars = {}
 undefined_subexprs = set()
 subexprs = {}
+
 
 def process_decl(node):
     if node.is_introduced:
         undefined_subexprs.add(node.var_name)
     else:
         decision_vars[node.var_name] = node.var_values
+
 
 def process_constraint(node):
     if node.defines == None:
@@ -99,6 +104,7 @@ def process_constraint(node):
             subexprs[product] = Poly([Term.mul(factor1, factor2)])
         elif node.predicate == "int_lin_eq":
             print(node.arguments)
+
 
 class ParDeclItem:
     name = "par_decl_item"
