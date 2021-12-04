@@ -1,4 +1,6 @@
 *.fzn
 *.ozn
-
+.vscode
 __pycache__/
+.mypy_cache/
+.DS_Store
