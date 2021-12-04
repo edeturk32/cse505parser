@@ -37,7 +37,7 @@ class Node:
     def get_things(self, items):
         f = None
         if items == [None] or items == None or items == []:
-            f = True
+            f = None
 
         elif isinstance(items, list):
             f = [self.get_values(i) for i in items]
@@ -87,7 +87,12 @@ class Node:
 
     def prune_class(self):
         for key, value in self.__dict__.items():
-            if isinstance(self.__dict__[key], list) and all(
+            if key == "basic_var_type" and not isinstance(self.__dict__[key], list):
+                self.__dict__[key] = "bool"
+            elif key == "annotations" and not isinstance(self.__dict__[key], list):
+                self.__dict__[key] = []
+
+            elif isinstance(self.__dict__[key], list) and all(
                 [i == None for i in self.__dict__[key]]
             ):
-                self.__dict__[key] = True
+                self.__dict__[key] = None

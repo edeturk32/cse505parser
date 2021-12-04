@@ -27,10 +27,12 @@ if __name__ in "__main__":
         "/Users/dan/Dropbox/SBU/fall_2021/computing_with_logic/project/cse505parser",
         "/Users/dan/Dropbox/SBU/fall_2021/computing_with_logic/project/cse505parser/quantum_tutorial",
     )
+    broken_files = []
     for directory in directories:
         for filename in os.listdir(directory):
             if filename.endswith(".fzn"):
-                if filename == "set_partition.fzn":
+                # if filename == "set_partition.fzn":
+                try:
                     f = f"{directory}/{filename}"
                     flatzinc = open(f, "r")
                     # print()
@@ -45,3 +47,7 @@ if __name__ in "__main__":
                         else:
                             mynode = Node(item)
                             print(mynode)
+                except Exception as e:
+                    broken_files.append(filename)
+    print(f"\n\nBroken Files:")
+    [print(f) for f in broken_files]
