@@ -26,6 +26,7 @@ subexprs = {}
 parameters = {}
 inequality_constraints = []
 equality_constraints = []
+objective = None
 
 
 def process_par(node):
@@ -51,6 +52,7 @@ def process_subexpr_constraint(node):
     elif node.identifier == "int_times":
         [var1, var2, product] = node.expr
         assert product == node.annotations[1]
+        decision_vars.pop(product)
         subexprs[product] = Poly.mul(subexprs[var1], subexprs[var2])
     elif node.identifier == "int_lin_eq":
         [coefficients, variables, constant] = node.expr
@@ -58,6 +60,7 @@ def process_subexpr_constraint(node):
         index = variables.index(defined_var)
         assert index >= 0
         assert abs(coefficients[index]) == 1
+        decision_vars.pop(defined_var)
         terms = [Term(coefficient=constant)]
         for i in range(len(coefficients)):
             if i == index:
@@ -85,6 +88,17 @@ def process_constraint(node):
             )]))
             poly = Poly.substitute(poly, variables[i], subexprs[variables[i]])
         inequality_constraints.append((poly.linear(), constant))
+    elif node.identifier == "int_lin_eq":
+        [coefficients, variables, constant] = node.expr
+        coefficients = parameters[coefficients]
+        poly = Poly()
+        for i in range(len(variables)):
+            poly = Poly.add(poly, Poly(terms=[Term(
+                coefficient=coefficients[i],
+                variables=[variables[i]]
+            )]))
+            poly = Poly.substitute(poly, variables[i], subexprs[variables[i]])
+        equality_constraints.append((poly.linear(), constant))
     elif node.identifier == "array_bool_or":
         variables = node.expr[:-1]
         value = node.expr[-1]
@@ -107,7 +121,7 @@ if __name__ in "__main__":
     for directory in directories:
         for filename in os.listdir(directory):
             if filename.endswith(".fzn"):
-                if filename == "vertex_cover.fzn":
+                if filename == "set_partitioning.fzn":
                     f = f"{directory}/{filename}"
                     flatzinc = open(f, "r")
                     # print()
@@ -151,19 +165,31 @@ if __name__ in "__main__":
                                 else:
                                     print(item_node)
                                     process_constraint(item_node)
+                            elif item_node.item_type == "minimize":
+                                objective = subexprs[item_node.var_par_identifier]
+                            elif item_node.item_type == "maximize":
+                                objective = Poly.mul(
+                                    Poly(terms=[Term(coefficient=-1)]),
+                                    subexprs[item_node.var_par_identifier]
+                                )
                     print("\n\nDecision Variables")
                     print(f"{'-'*100}")
                     for dv, vals in decision_vars.items():
                         print(dv, vals)
 
                     print(f"{'-'*100}\n\n")
-                    print("Subexpressions")
-                    print(f"{'-'*100}")
-                    for var, poly in subexprs.items():
-                        print(var, poly)
-
-                    print(f"{'-'*100}\n\n")
                     print("Inequality constraints")
                     print(f"{'-'*100}")
                     for poly, constant in inequality_constraints:
                         print(poly, "<=", constant)
+
+                    print(f"{'-'*100}\n\n")
+                    print("Equality constraints")
+                    print(f"{'-'*100}")
+                    for poly, constant in equality_constraints:
+                        print(poly, "=", constant)
+
+                    print(f"{'-'*100}\n\n")
+                    print("Objective")
+                    print(f"{'-'*100}")
+                    print("minimize", objective)

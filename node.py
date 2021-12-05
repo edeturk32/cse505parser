@@ -3,7 +3,10 @@ from lark import Token, Tree
 
 class Node:
     def __init__(self, tree: Tree):
-        self.item_type = tree.data.value
+        if isinstance(tree.data, str):
+            self.item_type = tree.data
+        else:
+            self.item_type = tree.data.value
         if self.item_type == "predicate":
             print()
         self.__dict__.update(self.parse_tree(tree))

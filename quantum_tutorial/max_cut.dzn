@@ -1,37 +1,4 @@
-%
-% data
-% 
-
-% """
-% In this example the network has 15 nodes and 22 edges.
-%
-% Optimal solution is 20
-% """
-num_edges = 22;
-num_nodes = 15;
-E = array2d(1..num_edges, 1..2, [
-   1, 2, 
-   1, 5, 
-   2, 3, 
-   2, 6, 
-   3, 4, 
-   3, 8, 
-   4, 9, 
-   5, 6, 
-   5, 7, 
-   6, 8, 
-   7, 8, 
-   7, 12, 
-   8, 9, 
-   8, 12, 
-   9, 10, 
-   9, 14, 
-   10, 11, 
-   10, 14, 
-   11, 15, 
-   12, 13, 
-   13, 14, 
-   14, 15]);
-
-% weights are just 1
-w = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
+V = 3;
+E = [| false, true, false
+     | false, false, true
+     | false, false, false |];

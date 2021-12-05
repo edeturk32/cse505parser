@@ -100,8 +100,8 @@ constraint_item : "constraint" identifier "(" [ expr ("," expr)* ] ")" annotatio
 // Solve item
 
 solve_item : "solve" annotations "satisfy" ";"
-               | "solve" annotations "minimize" basic_expr ";"
-               | "solve" annotations "maximize" basic_expr ";"
+               | "solve" annotations "minimize" basic_expr ";" -> minimize
+               | "solve" annotations "maximize" basic_expr ";" -> maximize
 
 // Annotations
 
