@@ -15,7 +15,7 @@ basic_par_type : "bool"
 par_type : basic_par_type
              | "array" "[" index_set "]" "of" basic_par_type
 
-basic_var_type : "var" "bool"
+basic_var_type : "var" "bool" -> bool
                    | "var" "int"
                    | "var" int_literal ".." int_literal
                    | "var" "{" int_literal ("," int_literal)* "}"
