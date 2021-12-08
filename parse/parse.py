@@ -56,7 +56,7 @@ def process_subexpr_constraint(node):
         [var1, var2, product] = node.expr
         assert product == node.annotations[1]
         decision_vars.pop(product)
-        subexprs[product] = Poly.mul(subexprs[var1], subexprs[var2])
+        subexprs[product] = Poly(terms=[Term.mul(Term(variables=[var1]), Term(variables=[var2]))])
     elif node.identifier == "int_lin_eq":
         [coefficients, variables, constant] = node.expr
         defined_var = node.annotations[1]
@@ -73,10 +73,6 @@ def process_subexpr_constraint(node):
                 variables=[variables[i]]
             ))
         poly = Poly(terms=terms)
-        for var in variables:
-            if var == defined_var:
-                continue
-            poly = poly.substitute(poly, var, subexprs[var])
         subexprs[defined_var] = poly
 
 def process_constraint(node):
@@ -89,7 +85,6 @@ def process_constraint(node):
                 coefficient=coefficients[i],
                 variables=[variables[i]]
             )]))
-            poly = Poly.substitute(poly, variables[i], subexprs[variables[i]])
         inequality_constraints.append((*poly.linear(), constant))
     elif node.identifier == "int_lin_eq":
         [coefficients, variables, constant] = node.expr
@@ -100,7 +95,6 @@ def process_constraint(node):
                 coefficient=coefficients[i],
                 variables=[variables[i]]
             )]))
-            poly = Poly.substitute(poly, variables[i], subexprs[variables[i]])
         equality_constraints.append((*poly.linear(), constant))
     elif node.identifier == "array_bool_or":
         variables = node.expr[:-1]
@@ -108,17 +102,58 @@ def process_constraint(node):
         if value == True:
             inequality_constraints.append((
                 [-1] * len(variables),
-                [subexprs[var].unit() for var in variables],
+                variables,
                 -1
             ))
         else:
             equality_constraints.append(
                 [1] * len(variables),
-                [subexprs[var].unit() for var in variables],
+                variables,
                 0
             )
 
+
+visited = set()
+def sub_postorder(variable):
+    visited.add(variable)
+    old_subexpr = subexprs[variable]
+    new_subexpr = old_subexpr
+    for term in old_subexpr.terms:
+        for var in term.variables:
+            if var != subexprs[var].unit():
+                if not(var in visited):
+                    sub_postorder(var)
+                new_subexpr = Poly.substitute(new_subexpr, var, subexprs[var])
+    subexprs[variable] = new_subexpr
+    return subexprs[variable]
+
+def substitute():
+    global objective
+    global inequality_constraints
+    global equality_constraints
+    var, opt = objective
+    objective = Poly.substitute(Poly(terms=[Term(variables=[var])]), var, sub_postorder(var))
+    if opt == "maximize":
+        objective = Poly(terms=[Term(coefficient=(-term.coefficient), variables=term.variables) for term in objective.terms])
+    new_inequality_constraints = []
+    for coefficients, variables, constant in inequality_constraints:
+        new_inequality_constraints.append((
+            coefficients,
+            [sub_postorder(var).unit() for var in variables],
+            constant
+        ))
+    inequality_constraints = new_inequality_constraints
+    new_equality_constraints = []
+    for coefficients, variables, constant in equality_constraints:
+        inequality_constraints.append((
+            coefficients,
+            [sub_postorder(var).unit() for var in variables],
+            constant
+        ))
+    equality_constraints = new_equality_constraints
+
 def parse_flatzinc(flatzinc):
+    global objective
     tree = ProcessFlatZinc().transform(
         Lark.open("parse/grammar.lark").parse(flatzinc.read())
     )
@@ -159,12 +194,10 @@ def parse_flatzinc(flatzinc):
                     #print(item_node)
                     process_constraint(item_node)
             elif item_node.item_type == "minimize":
-                objective = subexprs[item_node.var_par_identifier]
+                objective = (item_node.var_par_identifier, "minimize")
             elif item_node.item_type == "maximize":
-                objective = Poly.mul(
-                    Poly(terms=[Term(coefficient=-1)]),
-                    subexprs[item_node.var_par_identifier]
-                )
+                objective = (item_node.var_par_identifier, "maximize")
+    substitute()
     #print("\n\nDecision Variables")
     #print(f"{'-'*100}")
     #for dv, vals in decision_vars.items():

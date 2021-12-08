@@ -30,6 +30,7 @@ class Term:
             occurrences -= 1
             while occurrences > 0:
                 result = Poly.mul(result, poly)
+                occurrences -= 1
             return result
         else:
             return Poly(terms=[term])
