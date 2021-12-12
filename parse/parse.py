@@ -145,7 +145,7 @@ def substitute():
     inequality_constraints = new_inequality_constraints
     new_equality_constraints = []
     for coefficients, variables, constant in equality_constraints:
-        inequality_constraints.append((
+        new_equality_constraints.append((
             coefficients,
             [sub_postorder(var).unit() for var in variables],
             constant
